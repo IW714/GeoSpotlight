@@ -1,10 +1,9 @@
-import './App.css'
-import ThreeDText from './components/example'
+import Globe from './components/globe'
 
 function App() {
   return (
     <>
-      <ThreeDText />
+      <Globe />
     </>
   )
 }
