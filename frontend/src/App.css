@@ -1,0 +1,13 @@
+/* In your global CSS file */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%; /* Ensure the body takes full height */
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
