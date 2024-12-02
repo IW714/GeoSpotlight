@@ -1,4 +1,4 @@
-# React Vite Starter with FastAPI Backend
+# GeoSpotlight
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9-blue.svg)
@@ -6,7 +6,7 @@
 
 ## 📖 Description
 
-Welcome to the **React Vite Starter with FastAPI Backend** project! This repository serves as a boilerplate for building full-stack applications using ``FastAPI`` for the backend and ``React`` with ``Vite`` and ``Tailwind CSS`` for the frontend. It provides a seamless development environment with efficient tooling, enabling you to focus on building robust features without worrying about initial setup complexities.
+WIP
 
 ## Table of Contents
 
