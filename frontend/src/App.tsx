@@ -20,7 +20,6 @@ function App() {
 
       setMap(initializeMap);
 
-      // Clean up on unmount
       return () => initializeMap.remove();
     }
   }, [map]);
