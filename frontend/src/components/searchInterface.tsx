@@ -294,7 +294,6 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
                                 value={searchTerm} 
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
-                            <Button type="submit" onClick={handleSearch}>Search</Button>
                             <EventFilters
                                 onApplyFilters={handleApplyFilters}
                                 currentDateFilter={selectedDateFilter}
@@ -307,6 +306,9 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
                                 Saved
                             </Button>
                         </div>
+                    </CardContent>
+                    <CardContent>
+                        <Button type="submit" onClick={handleSearch} className="w-full">Search</Button>
                     </CardContent>
                 </Card>
             </div>
