@@ -35,9 +35,9 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
     const [searchTermResults, setSearchTermResults] = useState<EventItem[]>([]);
     const [isResultsVisible, setIsResultsVisible] = useState(false);
 
-    const markersRef = useRef<mapboxgl.Marker[]>([]);
-    const displayedMarkers = useRef<Set<string>>(new Set());
-    
+    const savedMarkersRef = useRef<mapboxgl.Marker[]>([]);
+    const defaultMarkersRef = useRef<mapboxgl.Marker[]>([]);
+
     const [savedEvents, setSavedEvents] = useState<SavedEventItem[]>([]);
     const [isSavedEventsVisible, setIsSavedEventsVisible] = useState(false);
 
@@ -45,7 +45,6 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
     const [numResults, setNumResults] = useState<number>(10);
 
     const savedKeys = useRef<Set<string>>(new Set());
-    const nonSavedMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
     useEffect(() => {
         fetchSavedEvents();
@@ -53,8 +52,8 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
 
     const createDefaultMarker = () => {
         const el = document.createElement('div');
-        el.style.width = '25px';
-        el.style.height = '25px';
+        el.style.width = '20px';
+        el.style.height = '20px';
         el.style.borderRadius = '50%';
         el.style.backgroundColor = 'black';
         el.style.border = '1px solid white';
@@ -63,8 +62,8 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
 
     const createHeartMarker = () => {
         const el = document.createElement('div');
-        el.style.width = '15px';
-        el.style.height = '15px';
+        el.style.width = '20px';
+        el.style.height = '20px';
         el.style.borderRadius = '50%';
         el.style.backgroundColor = 'black';
         el.style.border = '1px solid white';
@@ -91,41 +90,37 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
                 savedKeys.current.add(key);
             });
 
-            const existingMarkers = markersRef.current;
-            existingMarkers.forEach(m => {
-                // do nothing
-            });
+            // Remove existing saved markers
+            savedMarkersRef.current.forEach(marker => marker.remove());
+            savedMarkersRef.current = [];
 
-            // Ensure heart markers are displayed for all saved events
+            // Add heart markers for saved events
             data.events.forEach((event: SavedEventItem) => {
                 if (event.coordinates) {
-                    const key = getEventKey(event);
-                    if (!displayedMarkers.current.has(key)) {
-                        const markerElement = createHeartMarker();
-                        const marker = new mapboxgl.Marker({ element: markerElement })
-                            .setLngLat(event.coordinates)
-                            .setPopup(new mapboxgl.Popup().setText(event.title))
-                            .addTo(map);
-                        displayedMarkers.current.add(key);
-                        markersRef.current.push(marker);
-                    } else {
-                        // If a default marker was there for a saved event, remove it and replace with heart
-                        const idx = markersRef.current.findIndex(m => {
-                            const pp = m.getPopup();
-                            return pp && pp.getText() === event.title;
-                        });
-                        if (idx !== -1) {
-                            const oldMarker = markersRef.current[idx];
-                            oldMarker.remove();
-                            markersRef.current.splice(idx,1);
-                            const markerElement = createHeartMarker();
-                            const marker = new mapboxgl.Marker({ element: markerElement })
-                                .setLngLat(event.coordinates)
-                                .setPopup(new mapboxgl.Popup().setText(event.title))
-                                .addTo(map);
-                            markersRef.current.push(marker);
-                        }
-                    }
+                    const markerElement = createHeartMarker();
+                    const marker = new mapboxgl.Marker({ element: markerElement })
+                        .setLngLat(event.coordinates)
+                        .setPopup(new mapboxgl.Popup().setText(event.title))
+                        .addTo(map);
+                    savedMarkersRef.current.push(marker);
+                }
+            });
+
+            // Re-add default markers for searchTermResults not saved
+            // Remove existing default markers to prevent duplicates
+            defaultMarkersRef.current.forEach(marker => marker.remove());
+            defaultMarkersRef.current = [];
+
+            // Add default markers for searchTermResults not saved
+            searchTermResults.forEach((event: EventItem) => {
+                const key = getEventKey(event);
+                if (!savedKeys.current.has(key) && event.coordinates) {
+                    const markerElement = createDefaultMarker();
+                    const marker = new mapboxgl.Marker({ element: markerElement })
+                        .setLngLat(event.coordinates)
+                        .setPopup(new mapboxgl.Popup().setText(event.title))
+                        .addTo(map);
+                    defaultMarkersRef.current.push(marker);
                 }
             });
 
@@ -156,30 +151,40 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
             }
             
             const data = await response.json();
-            setSearchTermResults(data.events || []);
+            let eventsWithIds: EventItem[] = [];
+            if (data.events) {
+                eventsWithIds = data.events.map((event: EventItem, index: number) => {
+                    if (!event.id) {
+                        return { ...event, id: index + Date.now() };
+                    }
+                    return event;
+                });
+            }
+            setSearchTermResults(eventsWithIds || []);
             
-            nonSavedMarkersRef.current.forEach(m => m.remove());
-            nonSavedMarkersRef.current = [];
+            // Remove existing default markers
+            defaultMarkersRef.current.forEach(m => m.remove());
+            defaultMarkersRef.current = [];
 
-            (data.events || []).forEach((event: EventItem) => {
+            // Add default markers for search results not saved
+            (eventsWithIds || []).forEach((event: EventItem) => {
                 const key = getEventKey(event);
                 const isSaved = savedKeys.current.has(key);
-                if (event.coordinates && !isSaved && !displayedMarkers.current.has(key)) {
+                if (event.coordinates && !isSaved) {
                     const markerElement = createDefaultMarker();
                     const marker = new mapboxgl.Marker({ element: markerElement })
                         .setLngLat(event.coordinates)
                         .setPopup(new mapboxgl.Popup().setText(event.title))
                         .addTo(map);
-                    displayedMarkers.current.add(key);
-                    nonSavedMarkersRef.current.push(marker);
-                    markersRef.current.push(marker);
+                    defaultMarkersRef.current.push(marker);
                 }
             });
             
-            if (data.events && data.events.length > 0 && data.events[0].coordinates) {
+            // Fly to the first event's coordinates
+            if (eventsWithIds && eventsWithIds.length > 0 && eventsWithIds[0].coordinates) {
                 map.flyTo({
-                    center: data.events[0].coordinates,
-                    zoom: 16,
+                    center: eventsWithIds[0].coordinates,
+                    zoom: 10,
                     essential: true,
                 });
             }
@@ -218,6 +223,11 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
             });
             if (response.ok) {
                 await fetchSavedEvents();
+                // Remove default marker for this event if exists
+                defaultMarkersRef.current = defaultMarkersRef.current.filter(marker => {
+                    const lngLat = marker.getLngLat();
+                    return !(event.coordinates && lngLat.lng === event.coordinates![0] && lngLat.lat === event.coordinates![1]);
+                });
             } else {
                 console.error('Failed to save event');
             }
@@ -229,6 +239,16 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
                 });
                 if (response.ok) {
                     await fetchSavedEvents();
+                    // If the event is in search results, add default marker
+                    const eventInSearch = searchTermResults.find(e => getEventKey(e) === key && e.coordinates);
+                    if (eventInSearch && eventInSearch.coordinates) {
+                        const markerElement = createDefaultMarker();
+                        const marker = new mapboxgl.Marker({ element: markerElement })
+                            .setLngLat(eventInSearch.coordinates)
+                            .setPopup(new mapboxgl.Popup().setText(eventInSearch.title))
+                            .addTo(map);
+                        defaultMarkersRef.current.push(marker);
+                    }
                 } else {
                     console.error('Failed to delete event');
                 }
@@ -242,6 +262,17 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ map }) => {
         });
         if (response.ok) {
             await fetchSavedEvents();
+            // If the event is in search results, add default marker
+            const key = getEventKey(event);
+            const eventInSearch = searchTermResults.find(e => getEventKey(e) === key && e.coordinates);
+            if (eventInSearch && eventInSearch.coordinates) {
+                const markerElement = createDefaultMarker();
+                const marker = new mapboxgl.Marker({ element: markerElement })
+                    .setLngLat(eventInSearch.coordinates)
+                    .setPopup(new mapboxgl.Popup().setText(eventInSearch.title))
+                    .addTo(map);
+                defaultMarkersRef.current.push(marker);
+            }
         } else {
             console.error('Failed to delete event');
         }

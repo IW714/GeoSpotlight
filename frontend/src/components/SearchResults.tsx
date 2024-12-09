@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Heart, HeartOff } from 'lucide-react';
@@ -14,13 +14,24 @@ interface EventItem {
     id?: number;
 }
 
+interface SavedEventItem {
+    id: number;
+    title: string;
+    date: {
+        start_date: string;
+        when: string;
+    }
+    thumbnail?: string;
+    coordinates?: [number, number];
+}
+
 interface SearchResultsProps {
     events: EventItem[];
     searchTerm: string;
     map: mapboxgl.Map | null;
     onHide: () => void;
     onToggleSave: (event: EventItem) => void;
-    savedEvents: {id:number; title:string; date:{start_date:string; when:string}}[];
+    savedEvents: SavedEventItem[];
 }
 
 function getEventKey(event: EventItem) {
@@ -28,12 +39,9 @@ function getEventKey(event: EventItem) {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({ events, searchTerm, map, onHide, onToggleSave, savedEvents }) => {
-    // Create a set of keys for saved events for quick lookup
-    const savedKeys = new Set<string>();
-    savedEvents.forEach(ev => {
-        const k = ev.title + ':' + ev.date.start_date;
-        savedKeys.add(k);
-    });
+    const savedKeys = useMemo(() => {
+        return new Set(savedEvents.map(ev => getEventKey(ev)));
+    }, [savedEvents]);
 
     return (
         <div 
@@ -55,12 +63,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ events, searchTerm, map, 
                 </CardHeader>
                 <CardContent className="flex-grow overflow-y-auto">
                     <ul className="space-y-4">
-                        {events.map((event, index) => {
+                        {events.map((event) => {
                             const key = getEventKey(event);
                             const isSaved = savedKeys.has(key);
                             return (
                             <li
-                                key={index}
+                                key={event.id || key} // use event.id or key
                                 className="relative flex items-center hover:bg-gray-100 p-2 rounded-md transition-colors"
                             >
                                 {event.thumbnail && (
