@@ -8,7 +8,7 @@
 
 GeoSpotlight allows users to discover and manage events seamlessly within any city. Its offers an interactive mapping experience where users can search for events, visualize them on a map, and save their favorites for easy access later.
 
-[![Video](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[![Video](https://img.youtube.com/vi/NA_hH2VRVpM/maxresdefault.jpg)](https://www.youtube.com/watch?v=NA_hH2VRVpM)
 
 ## Table of Contents
 
