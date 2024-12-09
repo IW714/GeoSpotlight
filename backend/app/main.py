@@ -1,12 +1,11 @@
 from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 from supabase import create_client, Client
 from urllib.parse import unquote
 import os
 import asyncio
-
-
 
 from app.services.events import get_events
 from app.services.geocode import geocode_address
@@ -27,10 +26,58 @@ app.add_middleware(
     allow_headers=["*"],    
 )
 
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-supabase: Client = create_client(supabase_url, supabase_key)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+@app.post("/save_event")
+async def save_event(event: dict):
+    data = {
+        "title": event.get("title"),
+        "coordinates": event.get("coordinates"), # store as [lng, lat]
+        "date_start": event["date"]["start_date"],
+        "date_when": event["date"]["when"],
+        "thumbnail": event.get("thumbnail")
+    }
+    
+    try:
+        response = supabase.table("saved_events").insert(data).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message": "Event saved"}
+
+@app.get("/saved_events")
+async def get_saved_events():
+    try:
+        response = supabase.table("saved_events").select("*").execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    events = response.data or []
+    formatted_events = []
+    for e in events:
+        formatted_events.append({
+            "id": e["id"],
+            "title": e["title"],
+            "coordinates": e["coordinates"], 
+            "date": {
+                "start_date": e["date_start"],
+                "when": e["date_when"]
+            },
+            "thumbnail": e["thumbnail"]
+        })
+    return {"events": formatted_events}
+
+@app.delete("/delete_event/{event_id}")
+async def delete_event(event_id: int):
+    try:
+        response = supabase.table("saved_events").delete().eq("id", event_id).execute()
+        return {"message": "Event deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/search")
 async def search_events(
@@ -75,45 +122,6 @@ async def search_events(
         event['coordinates'] = coords
 
     return {'events': events_results}
-
-@app.get("/saved_events")
-async def get_saved_events():
-    """
-    Get all saved events from the database.
-
-    Returns:
-        dict: A dictionary containing a list of saved events.
-    """
-    saved_events = await supabase.table('events').select('*')
-    return saved_events
-
-@app.post("/save_event")
-async def save_event(event: dict):
-    """
-    Save an event to the database.
-
-    Args:
-        event (dict): The event to save.
-
-    Returns:
-        dict: The saved event.
-    """
-    saved_event = await supabase.table('events').insert(event)
-    return saved_event
-
-@app.delete("/delete_event")
-async def delete_event(event_id: int):
-    """
-    Delete an event from the database.
-
-    Args:
-        event_id (int): The ID of the event to delete.
-
-    Returns:
-        dict: The deleted event.
-    """
-    deleted_event = await supabase.table('events').delete().eq('id', event_id)
-    return deleted_event
 
 # @app.get("/protected")
 # def protected_route(user=Depends(verify_token)):

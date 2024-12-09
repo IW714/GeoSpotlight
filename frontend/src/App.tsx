@@ -13,9 +13,33 @@ function App() {
     if (node !== null && map === null) {
       const initializeMap = new mapboxgl.Map({
         container: node,
-        style: 'mapbox://styles/ivanwuo/cm44kuip0003001rzawn307ij',
+        style: 'mapbox://styles/mapbox/standard',
         center: [0, 0],
         zoom: 1,
+      });
+
+      initializeMap.on('style.load', () => {
+        initializeMap.setConfigProperty('basemap', 'lightPreset', 'dusk');
+      })
+    
+      initializeMap.on('load', () => {
+        initializeMap.addSource('mapbox-dem', {
+            'type': 'raster-dem',
+            'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            'tileSize': 512, 
+            'maxzoom': 14
+        });
+        initializeMap.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+    
+        initializeMap.addLayer({
+            'id': 'sky',
+            'type': 'sky',
+            'paint': {
+                'sky-type': 'atmosphere',
+                'sky-atmosphere-sun': [0.0, 0.0],
+                'sky-atmosphere-sun-intensity': 15
+            }
+        });
       });
 
       setMap(initializeMap);
